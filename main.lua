@@ -1124,6 +1124,59 @@ The max value ensures a page you stay on for a long time (because you fell aslee
                         separator = true,
                     },
                     {
+                        text = _("Dual Page Mode"),
+                        show_func = function()
+                            return self.ui.paging and self.ui.paging:supportsDualPage()
+                        end,
+                        sub_item_table = {
+                            {
+                                text = _("Divide page time in two"),
+                                checked_func = function()
+                                    return self.settings.dual_page_mode_divide_duration_by_two
+                                        and not self.settings.dual_page_mode_duplicate_duration
+                                end,
+                                callback = function()
+                                    self.settings.dual_page_mode_divide_duration_by_two =
+                                        not self.settings.dual_page_mode_divide_duration_by_two
+                                    self.settings.dual_page_mode_duplicate_duration = false
+                                end,
+                                help_text = _(
+                                    [[When reading in Dual Page Mode, by default, the total time spend on the pages will only count for the lowest page number (the base page).
+If you enable this setting, then the total time spend looking at both pages will be divided by two and stored for each page.
+
+Enabled:
+If you're reading page 2 and 3 for 10m, then we will store that you've spend 5m reading page 2 and 5m reading page 3.
+Disabled:
+If you're reading page 2 and 3 for 10m, then we will store that you've spend 10m reading page 2, and never read page 3.
+]]
+                                ),
+                            },
+                            {
+                                text = _("Store same time for both pages"),
+                                checked_func = function()
+                                    return self.settings.dual_page_mode_duplicate_duration
+                                        and not self.settings.dual_page_mode_divide_duration_by_two
+                                end,
+                                callback = function()
+                                    self.settings.dual_page_mode_divide_duration_by_two = false
+                                    self.settings.dual_page_mode_duplicate_duration =
+                                        not self.settings.dual_page_mode_duplicate_duration
+                                end,
+                                help_text = _(
+                                    [[When reading in Dual Page Mode, by default, the total time spend on the pages will only count for the lowest page number (the base page).
+If you enable this setting, then the total time spend looking at both pages will be stored for both pages.
+
+Enabled:
+If you're reading page 2 and 3 for 10m, then we will store that you've spend 10m reading page 2 and 10m reading page 3.
+Disabled:
+If you're reading page 2 and 3 for 10m, then we will store that you've spend 10m reading page 2, and never read page 3.
+]]
+                                ),
+                            },
+                        },
+                    },
+                    },
+                    {
                         text_func = function()
                             return T(_("Calendar weeks start on %1"),
                                 datetime.shortDayOfWeekToLongTranslation[datetime.weekDays[self.settings.calendar_start_day_of_week]])
