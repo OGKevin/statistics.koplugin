@@ -2624,6 +2624,41 @@ function ReaderStatistics:onPosUpdate(pos, pageno)
     end
 end
 
+function ReaderStatistics:onDualPageModeEnabled(enabled, base)
+    if not enabled then
+        return
+    end
+
+    logger.dbg("ReaderStatistics:onDualPageModeEnabled: setting page state for page pair", base)
+
+    local pair = self.ui.paging:getDualPagePairFromBasePage(base)
+    if #pair == 1 and pair[#pair] == self.curr_page then
+        return
+    end
+
+    local ts = os.time()
+
+    if self.page_stat and self.page_stat[base] then
+        local page_data = self.page_stat[base]
+        local latest = page_data[#page_data]
+        local original_ts = latest and latest[1]
+        if not original_ts then
+            ts = original_ts
+        end
+    end
+
+    for _, page in ipairs(pair) do
+        logger.dbg("ReaderStatistics:onDualPageModeEnabled setting page_data for", page, "to", ts)
+        local page_data = self.page_stat[page]
+
+        if page_data then
+            table.insert(page_data, { ts, 0 })
+        else
+            self.page_stat[page] = { { ts, 0 } }
+        end
+    end
+end
+
 function ReaderStatistics:onPageUpdate(pageno)
     if not self:isEnabledAndNotFrozen() then
         return
