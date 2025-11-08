@@ -2756,6 +2756,50 @@ function ReaderStatistics:onPageUpdate(pageno)
     end
 end
 
+-- @param pageno number should be the page we just turned away from
+function ReaderStatistics:updateDurationForSinglePageTurn(now_ts, pageno, divide_diff_by_two)
+    logger.dbg("ReaderStatistics:updateDurationForSinglePageTurn:", now_ts, pageno, divide_diff_by_two)
+
+    -- Get the previous page's last timestamp (if there is one)
+    local page_data = self.page_stat[pageno]
+    -- This is a list of tuples, in insertion order, we want the last one
+    local data_tuple = page_data and page_data[#page_data]
+    -- Tuple layout is { timestamp, duration }
+    local then_ts = data_tuple and data_tuple[1]
+    -- If we don't have a previous timestamp to compare to, abort early
+    if not then_ts then
+        logger.dbg("ReaderStatistics: No timestamp for previous page", pageno)
+        return
+    end
+
+    -- By now, we're sure that we actually have a tuple (and the rest of the code ensures they're sane, i.e., zero-initialized)
+    local curr_duration = data_tuple[2]
+    -- NOTE: If all goes well, given the earlier curr_page != pageno check, curr_duration should always be 0 here.
+    -- Compute the difference between now and the previous page's last timestamp
+    local diff_time = now_ts - then_ts
+
+    if divide_diff_by_two then
+        diff_time = diff_time / 2
+    end
+
+    if diff_time >= self.settings.min_sec and diff_time <= self.settings.max_sec then
+        self.mem_read_time = self.mem_read_time + diff_time
+        -- If it's the first time we're computing a duration for this page, count it as read
+        if #page_data == 1 and curr_duration == 0 then
+            self.mem_read_pages = self.mem_read_pages + 1
+        end
+        -- Update the tuple with the computed duration
+        data_tuple[2] = curr_duration + diff_time
+    elseif diff_time > self.settings.max_sec then
+        self.mem_read_time = self.mem_read_time + self.settings.max_sec
+        if #page_data == 1 and curr_duration == 0 then
+            self.mem_read_pages = self.mem_read_pages + 1
+        end
+        -- Update the tuple with the computed duration
+        data_tuple[2] = curr_duration + self.settings.max_sec
+    end
+end
+
 -- For backward compatibility
 function ReaderStatistics:importFromFile(base_path, item)
     item = util.trim(item)
