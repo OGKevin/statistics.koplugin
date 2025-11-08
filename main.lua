@@ -89,6 +89,11 @@ ReaderStatistics.default_settings = {
     calendar_show_histogram = true,
     calendar_browse_future_months = false,
     color = false,
+
+    -- Dual Page Mode settings
+    -- These should be XOR - if both are true, divide takes priority
+    dual_page_mode_divide_duration_by_two = false,
+    dual_page_mode_duplicate_duration = false,
 }
 
 function ReaderStatistics:onDispatcherRegisterActions()
