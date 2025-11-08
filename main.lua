@@ -2684,42 +2684,28 @@ function ReaderStatistics:onPageUpdate(pageno)
 
     self.pageturn_count = self.pageturn_count + 1
     local now_ts = os.time()
+    local pages = { pageno }
 
-    -- Get the previous page's last timestamp (if there is one)
-    local page_data = self.page_stat[self.curr_page]
-    -- This is a list of tuples, in insertion order, we want the last one
-    local data_tuple = page_data and page_data[#page_data]
-    -- Tuple layout is { timestamp, duration }
-    local then_ts = data_tuple and data_tuple[1]
-    -- If we don't have a previous timestamp to compare to, abort early
-    if not then_ts then
-        logger.dbg("ReaderStatistics: No timestamp for previous page", self.curr_page)
-        self.page_stat[pageno] = { { now_ts, 0 } }
-        self.curr_page = pageno
-        return
+    -- Dual Page Mode branching
+    if
+        self.ui.paging
+        and self.ui.paging:isDualPageEnabled()
+        and (self.settings.dual_page_mode_divide_duration_by_two or self.settings.dual_page_mode_duplicate_duration)
+    then
+        self.pageturn_count = self.pageturn_count + 1
+
+        local pair = self.ui.paging:getDualPagePairFromBasePage(self.curr_page)
+        pages = self.ui.paging:getDualPagePairFromBasePage(pageno)
+
+        for _, page in ipairs(pair) do
+            self:updateDurationForSinglePageTurn(now_ts, page, self.settings.dual_page_mode_divide_duration_by_two)
+        end
+    else
+        self:updateDurationForSinglePageTurn(now_ts, self.curr_page, false)
     end
 
-    -- By now, we're sure that we actually have a tuple (and the rest of the code ensures they're sane, i.e., zero-initialized)
-    local curr_duration = data_tuple[2]
-    -- NOTE: If all goes well, given the earlier curr_page != pageno check, curr_duration should always be 0 here.
-    -- Compute the difference between now and the previous page's last timestamp
-    local diff_time = now_ts - then_ts
-    if diff_time >= self.settings.min_sec and diff_time <= self.settings.max_sec then
-        self.mem_read_time = self.mem_read_time + diff_time
-        -- If it's the first time we're computing a duration for this page, count it as read
-        if #page_data == 1 and curr_duration == 0 then
-            self.mem_read_pages = self.mem_read_pages + 1
-        end
-        -- Update the tuple with the computed duration
-        data_tuple[2] = curr_duration + diff_time
-    elseif diff_time > self.settings.max_sec then
-        self.mem_read_time = self.mem_read_time + self.settings.max_sec
-        if #page_data == 1 and curr_duration == 0 then
-            self.mem_read_pages = self.mem_read_pages + 1
-        end
-        -- Update the tuple with the computed duration
-        data_tuple[2] = curr_duration + self.settings.max_sec
-    end
+
+    self.curr_page = pageno
 
     if closing then
         return -- current page data updated, nothing more needed
@@ -2744,15 +2730,14 @@ function ReaderStatistics:onPageUpdate(pageno)
         self.avg_time = (self.book_read_time + self.mem_read_time) / (self.book_read_pages + self.mem_read_pages)
     end
 
-    -- We're done, update the current page tracker
-    self.curr_page = pageno
-    -- And, in the new page's list, append a new tuple with the current timestamp and a placeholder duration
-    -- (duration will be computed on next pageturn)
-    local new_page_data = self.page_stat[pageno]
-    if new_page_data then
-        table.insert(new_page_data, { now_ts, 0 })
-    else
-        self.page_stat[pageno] = { { now_ts, 0 } }
+
+    for _, page in ipairs(pages) do
+        local new_page_data = self.page_stat[page]
+        if new_page_data then
+            table.insert(new_page_data, { now_ts, 0 })
+        else
+            self.page_stat[page] = { { now_ts, 0 } }
+        end
     end
 end
 
