@@ -1175,7 +1175,6 @@ If you're reading page 2 and 3 for 10m, then we will store that you've spend 10m
                             },
                         },
                     },
-                    },
                     {
                         text_func = function()
                             return T(_("Calendar weeks start on %1"),
