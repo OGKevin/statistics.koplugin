@@ -3056,7 +3056,7 @@ function ReaderStatistics:onPosUpdate(pos, pageno)
 end
 
 function ReaderStatistics:onDualPageModeEnabled(enabled, base)
-	if not enabled then
+	if not enabled or not self.ui.paging or not self.ui.paging.getDualPagePairFromBasePage then
 		return
 	end
 
@@ -3120,6 +3120,8 @@ function ReaderStatistics:onPageUpdate(pageno)
 	-- Dual Page Mode branching
 	if
 		self.ui.paging
+		and self.ui.paging.isDualPageEnabled
+		and self.ui.paging.getDualPagePairFromBasePage
 		and self.ui.paging:isDualPageEnabled()
 		and (self.settings.dual_page_mode_divide_duration_by_two or self.settings.dual_page_mode_duplicate_duration)
 	then
